@@ -1,0 +1,760 @@
+#Housing Prices Exploration 
+#by Derek Stratton
+
+========================================================
+
+###Abstract
+
+My fiance and I are getting married next month and we're in the process of
+searching for a new home for our future family. There are many factors to 
+consider when purchasing a new home, a few of them being: price, location, 
+future value, school districts, and safety. Although this data does not pertain
+to the city in which we are house hunting, the exploration process should
+provide valuable insight into what factors have the biggest influence on the
+price of a home.
+
+###Resources
+
+Downloaded dataset from: https://www.kaggle.com/harlfoxem/housesalesprediction
+
+This dataset contains house sale prices in King County, Washington between
+May 2014 to May 2015. 
+
+Other resources used:
+
+http://ggplot2.tidyverse.org/reference/
+
+http://bbs.ceb-institute.org/wp-content/uploads/2011/09/handout_ggplot2.pdf
+
+http://www.cookbook-r.com/Graphs/Bar_and_line_graphs_(ggplot2)/
+
+https://s3.amazonaws.com/udacity-hosted-downloads/ud651/
+GeographyOfAmericanMusic.html
+
+https://s3.amazonaws.com/content.udacity-data.com/courses/ud651/
+diamondsExample_2016-05.html
+
+https://s3.amazonaws.com/udacity-hosted-downloads/ud651/
+AtlanticHurricaneTracking.html
+
+https://github.com/Shreyas3108/house-price-prediction/blob/master/
+housesales.ipynb
+
+https://www.rstudio.com/wp-content/uploads/2015/03/ggplot2-cheatsheet.pdf
+
+http://www.sthda.com/english/wiki/ggplot2-scatter-plots-quick-start-guide
+-r-software-and-data-visualization
+
+
+
+###Dataset Preparations
+library(ggplot2)
+library(knitr)
+library(dplyr)
+library(maps)
+options(scipen=999)
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, packages}
+library(ggplot2)
+library(knitr)
+library(dplyr)
+library(maps)
+options(scipen=999)
+```
+
+```{r echo=FALSE, Load_the_Data}
+setwd('C:/Users/National Positions/Anaconda2/Section 6 - Exploratory Data Analysis/project')
+
+houses_data <- read.csv('kc_house_data_small.csv')
+```
+
+## Univariate Plots Section
+
+```{r}
+names(houses_data)
+
+```
+
+###Variable Observations & Analysis:
+
+There are a total of 21 variables within the dataset. The "yr_built" variable
+is nice to know because buying an older home, although sometimes less
+expensive than alternatives, may unearth unwanted repairs and remodeling, 
+resulting in more money spent and more stress as a new homeowner. I also will
+be creating an "age" variable based on the "yr_built" because it will be easier
+to understand. 
+
+Location is a strong factor for us so the "zipcode", "lat", and "long" 
+variables are very interesting to me. I'd like to explore ways of using these
+values within a plot to visually see where the most and least expensive homes
+are located. 
+
+Overall, all of the variables are of interest me. 
+
+```{r}
+str(houses_data)
+
+```
+
+###Structure Observations & Analysis:
+
+The structure of this dataset is a data frame and consists of 21 total 
+variables, including 3 different data types: numeric, integer, 
+and Factor. I already envisioned creating grouped distrbution graphs so I will
+be converting a few variables into Factors, such as "bedrooms". 
+
+```{r}
+summary(houses_data)
+
+```
+
+###Summary Observations & Analysis:
+
+The first thing I wanted to try and identify using the summary was any 
+outliers. Right off the bat I noticed the dataset contained records where there
+were values of zero for "bedrooms". I definitely want to omit those before 
+analyzing further. I also need to be mindful of what summary statistic is more
+appropriate to use - mean or median? Depending on my objective, there will be 
+instances when the median is a better fit, especially if there are few records
+being compared. 
+
+### Initial Exploration
+
+I discovered there were instances where homes had zero bedrooms. This sounds 
+implausible and was probably due to input error, but at any rate, I want to 
+remove these records.
+
+```{r}
+#find all instances when bedrooms is equal to zero
+count(houses_data, bedrooms==0)
+
+```
+
+It looks like there is only one home that contains zero bedrooms. I will now
+create a subset of the dataset that omits this instance.
+
+```{r}
+# remove all instances when bedrooms is equal to zero
+homes <- subset(houses_data, bedrooms > 0)
+
+```
+
+The resulting dataframe has 2999 objects, which is the expected number since
+our original dataset contained 3000 objects and we were only omitting 1.
+
+Now I want to convert the "yr_built" values into "age" because I think it's an
+easier way to understand how old a home actually is.
+
+```{r}
+#add an "age" column by subtrating the yr_built from 2018
+homes$age <- 2018 - homes$yr_built
+
+```
+
+Our new "homes" dataset now has a new numeric data-type variable called "age".
+
+Next, I will create a new "bedrooms" variable that is of Factor data-type 
+because I will need it to fill in my distribution plots.
+
+```{r}
+#convert bedrooms column to Factor data type
+homes$bedroom_count <- as.factor(homes$bedrooms)
+
+```
+
+The "homes" dataset now has a new Factor data-type variable called 
+"bedroom_count". This should allow me to use the "fill" functions when creating
+grouped distribution plots.
+
+Let's get some visuals about the ages of homes.
+
+```{r}
+#plot histogram of all the ages of homes
+ggplot(data=homes, aes(x=age)) + 
+  geom_histogram(binwidth = 1, col = "red", fill="white") +
+  labs(title="Ages of Homes") +
+  labs(x="Age") +
+  labs(y="# of Homes") +
+  scale_x_continuous(limits=c(0,125), breaks=seq(10, 120, 10)) + 
+  geom_vline(aes(xintercept=mean(age, na.rm=T)),color="blue", 
+             linetype="dashed",size=1)
+  
+```
+
+The average age of the 2999 observed homes is 50, which is somewhat alarming
+because that may be a sign that remodeling and repairs are inevitable for our
+future home. However, the histogram looks like most of the homes fall to the
+left of the average line, which indicates a higher count of newer homes. 
+Our ideal home is no more than 30 years old, so let's see how many homes fall
+under that criteria. 
+
+```{r}
+#find how many homes are 30 years old or youger
+length(which(homes$age<=30))
+length(which(homes$age>30))
+length(which(homes$age<=30)) + length(which(homes$age>30))
+
+```
+
+Well that's not what I expected. The left tail of the histogram may contain
+the largest bins and seem more dense, but the right tail actually contains 
+more homes because the tail itself is wider. This is disappointing because
+the chances of us finding a home that's within our desired age is less likely
+and we will most likely end up having to spend more money on remodeling and 
+repairs. Maybe that's not such a bad thing. As long as the home prices are 
+reasonably less expensive compared to the newer homes, the difference in
+price could cover the additional remodeling and repair costs. I'll explore
+this idea in the next section.
+
+```{r}
+#plot histogram of all the ages of homes but now group by the number of 
+#bedrooms
+ggplot(homes) + 
+  geom_histogram(aes(age, fill=bedroom_count), binwidth=1) + 
+  scale_x_continuous(limits=c(0,125), breaks=seq(10, 120, 10)) + 
+  labs(x='Age of the Home', y='Count', title='Home Ages')
+
+```
+
+It looks like most of the homes have between 2-4 bedrooms, which is great
+because we are looking for a 2-3 bedroom home.
+
+Now let's explore the prices of homes.
+
+```{r}
+#find range of home prices and summary of home prices
+range(homes$price)
+summary(homes$price)
+mean(homes$price)
+
+#plot the prices of all the homes
+ggplot(data=homes, aes(x=price)) + 
+  geom_histogram(col = "red", fill="white") +
+  labs(title="Prices of Homes", x="Price", y="# of Homes")
+
+#lets get a better look at this distrubution
+ggplot(data=homes, aes(x=price)) + 
+  geom_histogram(binwidth = 25000, col = "red", fill="white") +
+  labs(title="Prices of Homes") +
+  labs(x="Price") +
+  labs(y="# of Homes") +
+  scale_x_continuous(limits=c(0,6000000), breaks=seq(0, 6000000, 500000)) +
+  geom_vline(aes(xintercept=mean(price, na.rm=T)),color="blue", 
+             linetype="dashed",size=1)
+
+```
+
+My first plot didn't really give me much insight into the data so adjusting
+the binwidth and manipulating the x-axis allowed me to see that the distrubtion
+of prices is heavily right-skeweed. This is good news for me because our 
+budget is between $600,000 - 650,000. 
+
+As I did before with the age of homes, I'd like to see the distribution of
+prices in relation to the number of bedrooms.
+
+```{r}
+#plot the prices of homes
+ggplot(homes, aes(price, fill = bedroom_count)) +
+  geom_histogram(bins = 100)
+
+ggplot(homes, aes(price, colour = bedroom_count)) +
+  geom_freqpoly(bins = 100) +
+  geom_vline(aes(xintercept=mean(price, na.rm=T)),color="blue", 
+             linetype="dashed",size=.5)
+
+```
+
+I really like the second plot because it allows me to clearly see that 
+3-bedroom homes are the most available and it falls below the average home
+price line of $534,326. 
+
+Now that I've looked at the distribution of prices, one variable that is not
+included in the original dataset but is highly used when determining the value
+of a home, is the price per square footage. Let's create this variable.
+
+```{r}
+# create a new variable to shows how much the price per square footage is
+homes$price_per_sqft <- homes$price / homes$sqft_living
+
+```
+
+Now that we have this variable, let's plot it.
+
+```{r}
+#plot the price per square foot of all the homes
+ggplot(data=homes, aes(x=price_per_sqft)) + 
+  geom_histogram(col = "red", fill="white") +
+  labs(title="Price Per Square Feet", x="Price Per Sq Ft", y="# of Homes")
+
+```
+
+As expected, the shape of this distribution is also right-skewed just like the
+price histogram. 
+
+## Bivariate Plot Section
+
+The main purpose of this exploration is to determine what variable has the 
+most influence on the price of a home. Earlier I mentioned several different
+factors. Now I will explore the relationship between a few.
+
+### Price vs Square Feet of Living Space
+
+```{r}
+# view the relationship using scatterplot 
+ggplot(aes(x = sqft_living, y = price), data = homes) +
+  geom_point(color = "red", alpha = 1/10) +
+  labs(title="Price vs Sqft of Living Space", x="Sqft of Living Space", 
+       y="Price") + 
+  stat_smooth(method = "lm", formula = y ~ x, size = 1, color = "darkblue", 
+              fill="darkblue")
+
+# view relationship using line plot
+ggplot(aes(x = sqft_living, y = price), data = homes) +
+  geom_line(color = "red") +
+  labs(title="Price vs Sqft of Living Space", x="Sqft of Living Space", 
+       y="Price") +
+  stat_smooth(method = "lm", formula = y ~ x, size = 1, color = "darkblue", 
+              fill="darkblue")
+
+# perform a correlation test and see the results
+cor.test(homes$price, homes$sqft_living, method = 'pearson')
+
+```
+
+The relationship looks to be linear with a strong correlation coefficient
+of 0.70.
+
+### Price vs Age
+
+```{r}
+# view the relationship using scatterplot 
+ggplot(aes(x = age, y = price), data = homes) +
+  geom_point(color = "red", alpha = 1/10) +
+  labs(title="Price vs Age", x="Age", y="Price")
+
+# view relationship using line plot
+ggplot(aes(x = age, y = price), data = homes) +
+  geom_line(color = "red") +
+  labs(title="Price vs Age", x="Age", y="Price") 
+
+# perform a correlation test and see the results
+cor.test(homes$price, homes$age, method = 'pearson')
+
+```
+
+It doesn't look like there is any linear relationship between age and price but
+it was interesting to see a somewhat large concentration of homes hovering
+around the average home price but span across a wide age range: 15-60 years
+old. 
+
+###Price vs Location, Based on Zip Code
+
+```{r}
+# view the relationship using scatterplot 
+ggplot(aes(x = zipcode, y = price), data = homes) +
+  geom_point(color = "red", alpha = 1/10) +
+  labs(title="Price vs Location Zip Code", x="Zip Codes", y="Price")
+
+# view relationship using line plot
+ggplot(aes(x = zipcode, y = price), data = homes) +
+  geom_line(color = "red") +
+  labs(title="Price vs Zipcode", x="Zipcodes", y="Price") +
+  stat_smooth(method = "lm", formula = y ~ x, size = 1, color = "darkblue", 
+              fill="darkblue")
+
+# perform a correlation test and see the results
+cor.test(homes$price, homes$zipcode, method = 'pearson')
+
+```
+
+Based on the results, "price" was the only variable that exhibited any sign of
+correlation between itself and price.
+
+###Average & Median Price vs Age
+
+Next, I'd like to explore the average and median price of homes based on their
+age. Before doing so, I'd like to look into what statistic would be the most
+accurate to use when analyzing this type of relationship between grouped
+variables. Because the homes are grouped by age, I'm afraid that the average
+price of an age group with only a few samples could be distorted by outliers.
+
+```{r}
+#group the records by age
+homes_by_age <- group_by(homes, age)
+
+grouped_homes_by_age <- summarise(homes_by_age,
+	avg_home_price = mean(price),
+	median_home_price = median(price),
+	diff_bt_avg_median = avg_home_price - median_home_price,
+	n = n())
+
+#graph the difference between the age's average and median home price
+ggplot(aes(x = age, y = diff_bt_avg_median), data = grouped_homes_by_age) +
+  geom_line() +
+  labs(title = '# of Homes by Age', x = 'Age of the Home', y = 'Diff. B/t Avg
+       Home Price & Median Price')
+
+```
+
+The point of analyzing the difference between the average age and median for
+the age groups was to see which statistic is a better representation of the 
+sample. For example, age groups that have very few occurrences and a wide
+range between low and high prices, would be better off using the median rather
+than the average. For example, it looks like around age 10 there is a huge
+spike which represents a great difference between that age's average and 
+median. 
+
+It turns out that the highest peak in the graph belongs to homes that are 9
+years old and out of 11 homes in the dataset that are of that age, there is 
+one outlier that is distorting the average - a $5,350,000 home. For this
+reason, we will use the median price rather than the average price when 
+analyzing the relationship between the prices of grouped variables. 
+
+Now that we've came to that conclusion, let's look at the relationships.
+
+```{r}
+#graph the average price by year and median price by year
+ggplot(data=grouped_homes_by_age) + 
+  geom_line(aes(x = age, y = avg_home_price, colour = "Average")) + 
+  geom_line(aes(x = age, y = median_home_price, colour = "Median")) +
+  labs(colour = "Stats", x='Age of the Home', y='Price', 
+       title='Average vs Median Price')
+
+ggplot(data=grouped_homes_by_age, aes(x = age, y = avg_home_price)) + 
+  geom_line() +
+  labs(x='Age of the Home', y='Price', title='Average Home Price by Age') +
+  stat_smooth(method = "loess", formula = y ~ x, size = 1, color = "darkblue", 
+              fill="darkblue")
+
+ggplot(data=grouped_homes_by_age, aes(x = age, y = median_home_price)) + 
+  geom_line() +
+  labs(x='Age of the Home', y='Price', title='Median Home Price by Age') +
+  stat_smooth(method = "loess", formula = y ~ x, size = 1, color = "darkblue", 
+              fill="darkblue")
+
+
+```
+
+Based on our previous observation of "Price vs Age" and how the result was
+non-linear, I expected the average and median prices of the grouped ages to 
+resemble a similar pattern. Interestingly, when I added the smoothed layer to
+each individual graph, the shape of the curve almost resembled an inverted
+bell-shape. Why is this occuring? One theory could be that the newer homes have
+a higher value because they're just that - they are newer. And the older homes
+have a higher value because they could be considered "historic" and/or since
+they are so old, have since undergone a major remodel, thus increasing the 
+home's value. The dip in the curve could represent those homes that are stuck
+in the middle, where they aren't considered quite new anymore but are still not
+old enough to warrant a full remodel. Let's see if I can find out how many 
+homes between the ages of 70 - 120 have been remodeled.
+
+```{r}
+# find how many homes were remodeled between the ages of 70-120 years old
+length(which(homes$yr_renovated != 0 & homes$age > 69))
+length(which(homes$age > 69))
+99/680
+
+length(which(homes$yr_renovated != 0 & homes$age < 51))
+length(which(homes$age > 69))
+16/680
+
+```
+
+Out of the 680 total homes between the ages of 70-120, 99 of them have been 
+renovated or roughly 15%. Compare this to the meager 2% of homes that are 50
+years old or less, my speculation could be somewhat true.
+
+```{r}
+#renoated homes that are at least 70 years old
+
+ggplot(aes(x = age, y = price), 
+       data = subset(homes, homes$yr_renovated != 0 & homes$age > 69)) + 
+  geom_point()
+
+#renovated homes that are no more than 50 years old
+
+ggplot(aes(x = age, y = price), 
+       data = subset(homes, homes$yr_renovated != 0 & homes$age < 51)) + 
+  geom_point()
+
+```
+
+The scatterplots above clearly show that the majority of renovated homes are
+of the older kind.
+
+
+###Median Price vs Month Sold
+
+Moving along, like many industries, the housing market could experience their
+own seasonal affects where some periods generate more revenue than others. It
+would be smart to understand what time of year is the best to buy and sell.
+For that reason, I will now look at what months had the highest and lowest
+home prices for the year. 
+
+```{r}
+#convert the 'date' column into a standard date format
+
+homes$date1 <- substring(homes$date, 0, 8)
+
+homes$date1 <- gsub("(^\\d{4})(\\d{2})(\\d{2}$)", 
+                                    "\\1-\\2-\\3", homes$date1)
+
+homes$date1 <- format(as.Date(homes$date1), "%Y-%m")
+
+#test out formating of dates
+
+test <- '2014-10-13'
+
+test2 <- months(as.Date(test))
+
+test3 <- format(as.Date(test), "%Y-%m")
+
+
+```
+
+
+```{r}
+#group the records by month
+homes_by_month <- group_by(homes, date1)
+
+grouped_homes_by_month <- summarise(homes_by_month,
+	median_home_price = median(price),
+	n = n())
+
+#graph the median home price by month
+ggplot(data=grouped_homes_by_month, aes(x = date1, y = median_home_price, 
+                                        group = 1)) +
+  geom_line(stat="identity") +
+  geom_point(shape=16, size=2, fill="red", colour="blue", stroke=1) +
+  labs(x='Date', y='Median Price', title='Median Home Price by Date')
+  #stat_smooth(method = "loess", formula = y ~ x, size = 1, color = "darkblue", fill="darkblue")
+
+
+```
+
+Based on the graph, there is an upward trend from April to May of 2015 which 
+could be an indication that home prices rise during the summer because the same
+trend can be seen in the prior year. This conclusion is still inconclusive
+because we don't have enough date for prior or future years.
+
+###Homes on a Map
+
+Now that I've explored the relationship between date & price, age & price, and
+size & price, I will now look into the relationship between location and price.
+
+```{r}
+#map out the location of the homes
+ggplot(aes(x=long, y=lat), data=homes) +
+    geom_point()
+
+map <- map_data("state")
+
+ggplot(data=map) +
+  geom_polygon(aes(x=long, y=lat, group = group),colour="white", 
+               fill="grey10")
+
+washington <- subset(map, region %in% c("washington"))
+
+ggplot(data=washington) +
+  geom_polygon(aes(x=long, y=lat, group = group),colour="white", 
+      fill="grey10") + geom_jitter(data=homes, aes(x=long, y=lat), 
+      size = 1/10, color="yellow") + scale_size(name="Home Location")
+
+washington_zoom <- subset(map, (long > -124 & long < -119) & 
+                            (lat > 46 & lat < 49))
+
+ggplot(data=washington_zoom) +
+  geom_polygon(aes(x=long, y=lat, group = group),colour="white", 
+        fill="grey10") +   
+  geom_point(data=homes, aes(x=long, y=lat, colour = price)) + scale_colour_gradient(low="yellow", high="red")
+
+```
+
+Even when switching color scales, the result still is an overwhelming majority
+of yellow because most of the homes have a price less than $1 million dollars.
+
+## Multivariate Plots Section
+
+In this section I will add an additional layer to the various "price"
+relationship graphs that I previously created. 
+
+### Price vs Sqft of Living Space Grouped by Bedroom Count
+
+```{r}
+# prce vs sqft_living grouped by bedroom count
+ggplot(homes, aes(x=sqft_living, y=price, colour = bedroom_count)) +
+  geom_line() +
+  labs(colour = "Bedroom Count", title = "Price vs Sqft by # of Bedrooms",
+       x = "Sqft of Living", y = "Price")
+
+ggplot(homes, aes(sqft_living, price)) +
+  geom_point(color = "red") +
+  facet_wrap(~bedrooms) +
+  labs(x = "Sqft of Living", y = "Price", title = "Price vs Sqft Living 
+       Grouped by Bedroom Count")
+
+```
+
+As someone looking to start a family and grow into a house, the number of
+bedrooms is an important aspect to keep in mind. In our situation, we are 
+planning to have 2-3 children so choosing between a 3 and 4 bedroom house is a 
+big decision to make. But after looking at the results of the two plots, the
+decision might not be that hard. The plots for 3 and 4 bedrooms look almost 
+identical. This tells me that the number of bedrooms does not have an affect
+on the price of the home, rather the square footage and size of the home is 
+once again the biggest factor on price. A 2000 sqft 3-bedroom home could easily
+be the exact same price as a 2000 sqft 4-bedroom home. The difference could 
+simply come down to how the square footage is divided. Does one home allocate
+more living space to bedrooms, hence sacrificing community and bathroom space? 
+Does the other home do the opposite and create smaller rooms but increase the
+size of living rooms and bathrooms? It's hard to say based off the information
+provided. 
+
+### A Look Into Activity by Month
+
+```{r}
+ggplot(aes(x=bedroom_count,y=price),data=homes)+
+  geom_point(aes(colour=sqft_living))+facet_wrap(~date1)+
+  scale_colour_gradientn(colours=rainbow(4)) + 
+  labs(x = "# of Bedrooms", y = "Price", colour = "Sqft Living", 
+  title = "Price of Homes Based on # of Bedrooms & Size, Grouped by Month")
+
+```
+
+In an earlier observation when I looked at median home prices by month, this 
+breakdown shows the price variance for each month in terms of size and number 
+of bedrooms. What's interesting about these results is the somewhat bell-shaped
+curve that the distribution plots create, where the top of the curve represents
+the most expensive homes which fall in the 4-bedroom group. 
+
+
+#Final Plots and Summary
+
+###Plot One
+
+```{r}
+#plot both graphs at the same time
+  #newer plot
+renovated_homes <- ggplot() + 
+  geom_point(data = subset(homes, homes$yr_renovated != 0 & homes$age < 51), 
+  aes(x = age, y = price), color = "blue") + 
+  geom_smooth(data = subset(homes, homes$yr_renovated != 0 & homes$age < 51),
+  aes(x = age, y = price), method = "loess") +
+  #older plot
+  geom_point(data = subset(homes, homes$yr_renovated != 0 & homes$age > 69), 
+  aes(x = age, y = price), color = "red") + 
+  labs(title="Prices of Renovated Homes", x="Age", y="Price") +
+  geom_smooth(data = subset(homes, homes$yr_renovated != 0 & homes$age > 69), 
+  aes(x = age, y = price), method="loess") 
+
+renovated_homes
+
+```
+
+One of the most interesting discoveries I made during the exploration was the 
+effect that remodeling a home could have on the price. I segmented the dataset
+into two groups - a lower half containing newer homes between the ages of 1-50
+and an upper half containing older homes between the ages of 70-120. When both
+scatterplots are graphed simultaneously, you can see there's much 
+more variance in price with the newer homes and there's a much higher frequency 
+in the group of older homes. This makes sense. Older homes typically would need
+additional repairs or new fixtures throughout the home to increase the value 
+and make it easier to sell in the future. What's interesting about this graph
+is that there's 5 homes listed above $2 million - 4 of those homes being of the
+older type and 1 of them being a newer home. There's only 30 homes in the 
+entire dataset that are worth more than $2 million and if 4 of the 30 are older
+renovated homes, that accounts for 13%. This finding is promising for me during
+my house hunt because now I understand that newer homes aren't necessarily the
+only way to build equity. Yes, they certainly will save money on home repairs
+and remodeling and reduce the stress of renovation, but if I can find an older
+home for a good deal, I know that I can invest in renovatiations that will 
+ultimately increase the value of my home.
+
+###Plot Two
+
+```{r}
+#graph the median home price by month
+ggplot(data=grouped_homes_by_month, aes(x = date1, y = median_home_price, 
+                                        group = 1)) +
+  geom_line(stat="identity") +
+  geom_point(shape=16, size=1, fill="red", colour="blue", stroke=1) +
+  geom_text(aes(x=date1, label=median_home_price), size=4, vjust=1, hjust=.5) +
+  labs(x='Date', y='Median Price', title='Median Home Price by Date') +
+  geom_smooth(method = "lm", colour="red", linetype="dashed")
+
+```
+
+I chose this graph because as a future home owner it is important to understand
+trends in the housing market, that way you can predict when the best time to 
+sell your home will be. If May, June, and July show upward trends in price 
+compared to the rest of the year, I can do further research into what factors 
+could be contributing to this. Maybe there's an increase in families looking to 
+move before the new school year starts for their kids which causes the demand 
+in the market to increase and swings the selling leverage over to homeowners. 
+If this ends up being true, it would be beneficial to me to put more emphasis
+on where my future home is located in proximity to great schools. 
+
+
+###Plot Three
+
+```{r}
+
+bedroom_names <- c(
+                    '1' = "1-Bedroom",
+                    '2' = "2-Bedrooms",
+                    '3' = "3-Bedrooms",
+                    '4' = "4-Bedrooms",
+                    '5' = "5-Bedrooms",
+                    '6' = "6-Bedrooms",
+                    '7' = "7-Bedrooms",
+                    '8' = "8-Bedrooms"
+                    )
+
+# price vs sqft_living grouped by bedroom count
+ggplot(homes, aes(sqft_living, price)) +
+  geom_point(color = "red", alpha = 1/4) +
+  facet_wrap(~bedrooms, labeller = as_labeller(bedroom_names)) + 
+  geom_smooth(method = "lm", colour="blue") +
+  labs(x = "Sqft of Living Space", y = "Price", 
+  title = "Price vs Sqft Living Grouped by Bedroom Count") 
+
+```
+
+I chose this as my last plot of interest because at the end of my exploration,
+I concluded that the biggest inflencing factor on home price was living square
+footage and this graph further clarifies that notion. No matter the number of
+bedrooms a house offers, the living square footage will still have the highest
+correlation to an increasing price compared to all other variables. 
+
+All in all, if I needed to make a choice as to what home to buy, I would choose
+a 4-bedroom home anywhere in the range of zipcodes and if the age of the home
+is on the higher end of the scale, I would make sure that it was recently 
+renovated within the last 20 years. If I ever decided to sell this home, I 
+would do it during the summertime, as I would get the most value out of my 
+property. 
+
+#Reflection
+
+After working with univariate, bivariate, and multivariate plots, I feel that
+each had it's own benefits. It's probably meant to be this way, but I found
+myself creating a univariate plot based off of one idea, but then that quickly
+segued into another question that needed to be explored using a bivariate plot,
+and then that quickly became a multivariate plot. It reminded me of creating 
+layers to a photoshopped image - eventually the final graphic would display a 
+well detailed picture. 
+
+I definitely need more practice but overall I feel that I have improved my 
+visualization skills. The most difficult or tricky part I faced  was figuring 
+out if I should work within or outside of an aesthetic. After many trial-
+and-error attempts, I eventually would figure it out. Speaking of figuring 
+things out, I was happy that I figured out how to account for outliers which 
+helped me decide on using the median rather than the average during some of the
+exploration. 
+
+In the future, I would like to explore the idea of extrapolating the data for 
+the plots where I grouped them by Month. The dataset only contained values for
+one year but if I truly wanted to create a more precise model of what the 
+best time of year to sell a home would be, I would need to include data for 
+many years. Earlier I touched on the notion of schools potentially playing a
+factor in home prices, so I would also like to explore that avenue and possibly
+import data related to schools.
